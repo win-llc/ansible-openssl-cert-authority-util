@@ -1,0 +1,71 @@
+---
+
+- name: Generate Server Certificate
+  hosts: localhost
+  connection: local
+
+  vars:
+    root_ca_private_key_password: password
+    intermediate_ca_private_key_password: password
+    server_private_key_password: password
+    server_fqdn: test.winllc-dev.com
+
+  tasks:
+  - name: Generate root private key
+    community.crypto.openssl_privatekey:
+      path: "{{ playbook_dir }}/ca/intermediate/private/{{ server_fqdn }}.key.pem"
+      passphrase: "{{ server_private_key_password }}"
+      cipher: auto
+      size: 2048
+
+  - name: Change private permissions
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/private/{{ server_fqdn }}.key.pem"
+      mode: '0400'
+
+  - name: Server CSR
+    community.crypto.openssl_csr:
+      path: "{{ playbook_dir }}/ca/intermediate/csr/{{ server_fqdn }}.csr.pem"
+      privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/{{ server_fqdn }}.key.pem"
+      privatekey_passphrase: "{{ server_private_key_password }}"
+      common_name: "{{ server_fqdn }}"
+      create_subject_key_identifier: yes
+      key_usage_critical: yes
+      key_usage:
+        - digitalSignature
+        - keyEncipherment
+      extended_key_usage:
+        - serverAuth
+        - clientAuth
+
+  - name: Generate an OpenSSL certificate signed with your own CA certificate
+    community.crypto.x509_certificate:
+      path: "{{ playbook_dir }}/ca/intermediate/certs/{{ server_fqdn }}.cert.pem"
+      csr_path: "{{ playbook_dir }}/ca/intermediate/csr/{{ server_fqdn }}.csr.pem"
+      ownca_path: "{{ playbook_dir }}/ca/intermediate/certs/intermediate.cert.pem"
+      ownca_privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/intermediate.key.pem"
+      ownca_privatekey_passphrase: "{{ intermediate_ca_private_key_password }}"
+      provider: ownca
+
+  - name: Change cert permissions
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/certs/{{ server_fqdn }}.cert.pem"
+      mode: '0444'
+      
+  - name: Create PKCS#12 Folder
+    file:
+      path: "{{ playbook_dir }}/pkcs12"
+      state: directory
+      mode: '0755'
+
+  - name: Generate PKCS#12
+    community.crypto.openssl_pkcs12:
+      action: export
+      path: "{{ playbook_dir }}/pkcs12/{{ server_fqdn }}.p12"
+      friendly_name: "{{ server_fqdn }}"
+      passphrase: "{{ server_private_key_password }}"
+      privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/{{ server_fqdn }}.key.pem"
+      privatekey_passphrase: "{{ server_private_key_password }}"
+      certificate_path: "{{ playbook_dir }}/ca/intermediate/certs/{{ server_fqdn }}.cert.pem"
+      other_certificates: "{{ playbook_dir }}/ca/intermediate/certs/ca-chain.cert.pem"
+      state: present

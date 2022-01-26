@@ -1,0 +1,192 @@
+---
+
+- name: Setup Certificate Authority
+  hosts: localhost
+  connection: local
+
+  vars:
+    root_ca_private_key_password: password
+    intermediate_ca_private_key_password: password
+    intermediate_ca_cn: DEV INTERMEDIATE CA
+
+  tasks:
+  - name: Create CA dir
+    file:
+      path: "{{ playbook_dir }}/ca"
+      state: directory
+
+  - name: Create root CA directories
+    file:
+      path: "{{ playbook_dir }}/ca/{{ item}}"
+      state: directory
+    with_items:
+      - certs
+      - crl
+      - newcerts
+      - private
+      - csr
+
+  - name: Change private permissions
+    file:
+      path: "{{ playbook_dir }}/ca/private"
+      mode: '0700'
+
+  - name: Create index.txt, serial
+    file:
+      path: "{{ playbook_dir }}/ca/{{ item }}"
+      state: touch
+    with_items:
+      - index.txt
+      - serial
+
+  - name: Init serial
+    copy:
+      content: "1000"
+      dest: "{{ playbook_dir }}/ca/serial"
+
+  - name: Copy openssl.cnf template
+    template:
+      src: "{{ playbook_dir }}/templates/root_openssl.cnf.j2"
+      dest: "{{ playbook_dir }}/ca/openssl.cnf"
+
+  - name: Generate root private key
+    community.crypto.openssl_privatekey:
+      path: "{{ playbook_dir }}/ca/private/ca.key.pem"
+      passphrase: "{{ root_ca_private_key_password }}"
+      cipher: auto
+      size: 4096
+
+  - name: Change private permissions
+    file:
+      path: "{{ playbook_dir }}/ca/private/ca.key.pem"
+      mode: '0400'
+
+  - name: Generate Root CA CSR
+    community.crypto.openssl_csr:
+      path: "{{ playbook_dir }}/ca/csr/ca.csr.pem"
+      privatekey_path: "{{ playbook_dir }}/ca/private/ca.key.pem"
+      privatekey_passphrase: "{{ root_ca_private_key_password }}"
+      common_name: DEV ROOT CA
+      create_subject_key_identifier: yes
+      key_usage_critical: yes
+      key_usage:
+        - digitalSignature
+        - cRLSign
+        - keyCertSign
+      basic_constraints_critical: yes
+      basicConstraints:
+        - 'CA:TRUE'
+
+  - name: Generate Root CA Cert
+    community.crypto.x509_certificate:
+      path: "{{ playbook_dir }}/ca/certs/ca.cert.pem"
+      privatekey_path: "{{ playbook_dir }}/ca/private/ca.key.pem"
+      privatekey_passphrase: "{{ root_ca_private_key_password }}"
+      csr_path: "{{ playbook_dir }}/ca/csr/ca.csr.pem"
+      provider: selfsigned
+
+  - name: Create intermediate CA parent directory
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate"
+      state: directory
+
+  - name: Create intermediate CA directories
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/{{ item}}"
+      state: directory
+    with_items:
+      - certs
+      - crl
+      - newcerts
+      - private
+      - csr
+
+  - name: Change private permissions
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/private"
+      mode: '0700'
+
+  - name: Create index.txt, serial
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/{{ item }}"
+      state: touch
+    with_items:
+      - index.txt
+      - serial
+
+  - name: Init serial
+    copy:
+      content: "1000"
+      dest: "{{ playbook_dir }}/ca/intermediate/serial"
+
+  - name: Init crlnumber
+    copy:
+      content: "1000"
+      dest: "{{ playbook_dir }}/ca/intermediate/crlnumber"
+
+  - name: Copy openssl.cnf template
+    template:
+      src: "{{ playbook_dir }}/templates/intermediate_openssl.cnf.j2"
+      dest: "{{ playbook_dir }}/ca/intermediate/openssl.cnf"
+
+  - name: Generate intermediate private key
+    community.crypto.openssl_privatekey:
+      path: "{{ playbook_dir }}/ca/intermediate/private/intermediate.key.pem"
+      passphrase: "{{ intermediate_ca_private_key_password }}"
+      cipher: auto
+      size: 4096
+
+  - name: Change private permissions
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/private/intermediate.key.pem"
+      mode: '0400'
+
+  - name: Generate Intermediate CA CSR
+    community.crypto.openssl_csr:
+      path: "{{ playbook_dir }}/ca/intermediate/csr/intermediate.csr.pem"
+      privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/intermediate.key.pem"
+      privatekey_passphrase: "{{ intermediate_ca_private_key_password }}"
+      common_name: "{{ intermediate_ca_cn }}"
+      create_subject_key_identifier: yes
+      key_usage_critical: yes
+      key_usage:
+        - digitalSignature
+        - cRLSign
+        - keyCertSign
+      basic_constraints_critical: yes
+      basicConstraints:
+        - 'CA:TRUE'
+        - 'pathlen:0'
+
+  - name: Generate an OpenSSL certificate signed with your own CA certificate
+    community.crypto.x509_certificate:
+      path: "{{ playbook_dir }}/ca/intermediate/certs/intermediate.cert.pem"
+      csr_path: "{{ playbook_dir }}/ca/intermediate/csr/intermediate.csr.pem"
+      ownca_path: "{{ playbook_dir }}/ca/certs/ca.cert.pem"
+      ownca_privatekey_path: "{{ playbook_dir }}/ca/private/ca.key.pem"
+      ownca_privatekey_passphrase: "{{ root_ca_private_key_password }}"
+      provider: ownca
+
+  - name: Change cert permissions
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/certs/intermediate.cert.pem"
+      mode: '0444'
+
+  - name: Create ca-chain.cert.pem
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/certs/ca-chain.cert.pem"
+      state: touch
+
+  - name: Concat cert files
+    shell: "cat {{ playbook_dir }}/ca/intermediate/certs/intermediate.cert.pem {{ playbook_dir }}/ca/certs/ca.cert.pem > {{ playbook_dir }}/ca/intermediate/certs/ca-chain.cert.pem"
+
+  - name: Change cert permissions
+    file:
+      path: "{{ playbook_dir }}/ca/intermediate/certs/ca-chain.cert.pem"
+      mode: '0444'
+      
+  - name: Create PKCS#7 File
+    shell: "openssl crl2pkcs7 -nocrl -certfile {{ playbook_dir }}/ca/intermediate/certs/intermediate.cert.pem -certfile {{ playbook_dir }}/ca/certs/ca.cert.pem -out {{ playbook_dir }}/ca/intermediate/certs/ca-pkcs7.p7b.pem"
+    
+  - name: Create PKCS#12 File
+    shell: "openssl pkcs12 -export -nokeys -passin pass:{{ intermediate_ca_private_key_password }} -passout pass:{{ intermediate_ca_private_key_password }} -in {{ playbook_dir }}/ca/intermediate/certs/ca-chain.cert.pem -out {{ playbook_dir }}/ca/intermediate/certs/ca-pkcs12.p12.pem"

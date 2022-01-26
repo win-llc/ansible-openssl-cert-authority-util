@@ -1,0 +1,22 @@
+---
+
+- name: Teardown Generated Files and Directories
+  hosts: localhost
+  connection: local
+
+  tasks:
+
+  - name: Clear CRL Directory
+    file:
+      path: "{{ playbook_dir }}/crl"
+      state: absent
+
+  - name: Clear PKCS#12 Directory
+    file:
+      path: "{{ playbook_dir }}/pkcs12"
+      state: absent
+
+  - name: Clear CA Directory
+    file:
+      path: "{{ playbook_dir }}/ca"
+      state: absent
