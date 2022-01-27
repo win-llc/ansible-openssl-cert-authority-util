@@ -10,24 +10,25 @@
     server_private_key_password: password
     user_cn: 'Test User 1'
     user_cn_flat: "{{ user_cn | replace(' ','') }}"
+    deploy_dir: "{{ playbook_dir }}"
 
   tasks:
   - name: Generate root private key
     community.crypto.openssl_privatekey:
-      path: "{{ playbook_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
+      path: "{{ deploy_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
       passphrase: "{{ server_private_key_password }}"
       cipher: auto
       size: 2048
 
   - name: Change private permissions
     file:
-      path: "{{ playbook_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
+      path: "{{ deploy_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
       mode: '0400'
 
   - name: User CSR
     community.crypto.openssl_csr:
-      path: "{{ playbook_dir }}/ca/intermediate/csr/{{ user_cn_flat }}.csr.pem"
-      privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
+      path: "{{ deploy_dir }}/ca/intermediate/csr/{{ user_cn_flat }}.csr.pem"
+      privatekey_path: "{{ deploy_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
       privatekey_passphrase: "{{ server_private_key_password }}"
       common_name: "{{ user_cn }}"
       create_subject_key_identifier: yes
@@ -42,32 +43,32 @@
 
   - name: Generate an OpenSSL certificate signed with your own CA certificate
     community.crypto.x509_certificate:
-      path: "{{ playbook_dir }}/ca/intermediate/certs/{{ user_cn_flat }}.cert.pem"
-      csr_path: "{{ playbook_dir }}/ca/intermediate/csr/{{ user_cn_flat }}.csr.pem"
-      ownca_path: "{{ playbook_dir }}/ca/intermediate/certs/intermediate.cert.pem"
-      ownca_privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/intermediate.key.pem"
+      path: "{{ deploy_dir }}/ca/intermediate/certs/{{ user_cn_flat }}.cert.pem"
+      csr_path: "{{ deploy_dir }}/ca/intermediate/csr/{{ user_cn_flat }}.csr.pem"
+      ownca_path: "{{ deploy_dir }}/ca/intermediate/certs/intermediate.cert.pem"
+      ownca_privatekey_path: "{{ deploy_dir }}/ca/intermediate/private/intermediate.key.pem"
       ownca_privatekey_passphrase: "{{ intermediate_ca_private_key_password }}"
       provider: ownca
 
   - name: Change cert permissions
     file:
-      path: "{{ playbook_dir }}/ca/intermediate/certs/{{ user_cn_flat }}.cert.pem"
+      path: "{{ deploy_dir }}/ca/intermediate/certs/{{ user_cn_flat }}.cert.pem"
       mode: '0444'
 
   - name: Create PKCS#12 Folder
     file:
-      path: "{{ playbook_dir }}/pkcs12"
+      path: "{{ deploy_dir }}/pkcs12"
       state: directory
       mode: '0755'
 
   - name: Generate PKCS#12
     community.crypto.openssl_pkcs12:
       action: export
-      path: "{{ playbook_dir }}/pkcs12/{{ user_cn_flat }}.p12"
+      path: "{{ deploy_dir }}/pkcs12/{{ user_cn_flat }}.p12"
       friendly_name: "{{ user_cn_flat }}"
       passphrase: "{{ server_private_key_password }}"
-      privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
+      privatekey_path: "{{ deploy_dir }}/ca/intermediate/private/{{ user_cn_flat }}.key.pem"
       privatekey_passphrase: "{{ server_private_key_password }}"
-      certificate_path: "{{ playbook_dir }}/ca/intermediate/certs/{{ user_cn_flat }}.cert.pem"
-      other_certificates: "{{ playbook_dir }}/ca/intermediate/certs/ca-chain.cert.pem"
+      certificate_path: "{{ deploy_dir }}/ca/intermediate/certs/{{ user_cn_flat }}.cert.pem"
+      other_certificates: "{{ deploy_dir }}/ca/intermediate/certs/ca-chain.cert.pem"
       state: present

@@ -4,18 +4,21 @@
   hosts: localhost
   connection: local
 
+  vars:
+    deploy_dir: "{{ playbook_dir }}"
+
   tasks:
 
   - name: Create CRL Folder
     file:
-      path: "{{ playbook_dir }}/crl"
+      path: "{{ deploy_dir }}/crl"
       state: directory
       mode: '0755'
 
   - name: Update CRL
     community.crypto.x509_crl:
-      path: "{{ playbook_dir }}/crl/intermediate_ca.crl"
-      privatekey_path: "{{ playbook_dir }}/ca/intermediate/private/intermediate.key.pem"
+      path: "{{ deploy_dir }}/crl/intermediate_ca.crl"
+      privatekey_path: "{{ deploy_dir }}/ca/intermediate/private/intermediate.key.pem"
       privatekey_passphrase: "{{ intermediate_ca_private_key_password }}"
       issuer:
         CN: "{{ intermediate_ca_cn }}"
@@ -23,4 +26,4 @@
       last_update: "+0s"
       next_update: "+720d"
       revoked_certificates:
-        - path: "{{playbook_dir}}/ca/intermediate/certs/{{ cert_file }}"
+        - path: "{{deploy_dir}}/ca/intermediate/certs/{{ cert_file }}"

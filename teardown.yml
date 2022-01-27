@@ -4,19 +4,22 @@
   hosts: localhost
   connection: local
 
+  vars:
+    deploy_dir: "{{ playbook_dir }}"
+
   tasks:
 
   - name: Clear CRL Directory
     file:
-      path: "{{ playbook_dir }}/crl"
+      path: "{{ deploy_dir }}/crl"
       state: absent
 
   - name: Clear PKCS#12 Directory
     file:
-      path: "{{ playbook_dir }}/pkcs12"
+      path: "{{ deploy_dir }}/pkcs12"
       state: absent
 
   - name: Clear CA Directory
     file:
-      path: "{{ playbook_dir }}/ca"
+      path: "{{ deploy_dir }}/ca"
       state: absent
