@@ -127,7 +127,7 @@
 
   - name: Copy openssl.cnf template
     template:
-      src: "{{ deploy_dir }}/templates/intermediate_openssl.cnf.j2"
+      src: "{{ playbook_dir }}/templates/intermediate_openssl.cnf.j2"
       dest: "{{ deploy_dir }}/ca/intermediate/openssl.cnf"
 
   - name: Generate intermediate private key
