@@ -11,6 +11,11 @@
     deploy_dir: "{{ playbook_dir }}"
 
   tasks:
+  - name: Create deployment directory if does not exist
+    file:
+      path: "{{ deploy_dir }}"
+      state: directory
+  
   - name: Create CA dir
     file:
       path: "{{ deploy_dir }}/ca"
@@ -190,4 +195,4 @@
     shell: "openssl crl2pkcs7 -nocrl -certfile {{ deploy_dir }}/ca/intermediate/certs/intermediate.cert.pem -certfile {{ deploy_dir }}/ca/certs/ca.cert.pem -out {{ deploy_dir }}/ca/intermediate/certs/ca-pkcs7.p7b.pem"
     
   - name: Create PKCS#12 File
-    shell: "openssl pkcs12 -export -nokeys -passin pass:{{ intermediate_ca_private_key_password }} -passout pass:{{ intermediate_ca_private_key_password }} -in {{ deploy_dir }}/ca/intermediate/certs/ca-chain.cert.pem -out {{ deploy_dir }}/ca/intermediate/certs/ca-pkcs12.p12.pem"
+    shell: "openssl pkcs12 -export -nokeys -passin pass:{{ intermediate_ca_private_key_password }} -passout pass:{{ intermediate_ca_private_key_password }} -in {{ deploy_dir }}/ca/intermediate/certs/ca-chain.cert.pem -out {{ deploy_dir }}/ca/intermediate/certs/ca-pkcs12.p12"
