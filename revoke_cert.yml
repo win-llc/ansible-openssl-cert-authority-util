@@ -42,6 +42,4 @@
       revoked_certificates:
         - serial_number: "{{ serial_number }}"
           revocation_date: "+0s"
-          issuer:
-            - "DNS:{{ intermediate_ca_cn }}"
     when: serial_number is defined
