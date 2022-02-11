@@ -43,5 +43,5 @@
         - serial_number: "{{ serial_number }}"
           revocation_date: "+0s"
           issuer:
-            CN: "{{ intermediate_ca_cn }}"
+            - "{{ intermediate_ca_cn }}"
     when: serial_number is defined
