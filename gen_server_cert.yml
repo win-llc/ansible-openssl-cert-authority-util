@@ -12,7 +12,7 @@
     deploy_dir: "{{ playbook_dir }}"
 
   tasks:
-  - name: Generate root private key
+  - name: Generate private key
     community.crypto.openssl_privatekey:
       path: "{{ deploy_dir }}/ca/intermediate/private/{{ server_fqdn }}.key.pem"
       passphrase: "{{ server_private_key_password }}"

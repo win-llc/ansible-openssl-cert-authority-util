@@ -15,7 +15,7 @@
       state: directory
       mode: '0755'
 
-  - name: Update CRL
+  - name: Update CRL with Certificate
     community.crypto.x509_crl:
       path: "{{ deploy_dir }}/crl/intermediate_ca.crl"
       privatekey_path: "{{ deploy_dir }}/ca/intermediate/private/intermediate.key.pem"
@@ -27,3 +27,21 @@
       next_update: "+720d"
       revoked_certificates:
         - path: "{{deploy_dir}}/ca/intermediate/certs/{{ cert_file }}"
+    when: cert_file is defined
+    
+  - name: Update CRL with Serial
+    community.crypto.x509_crl:
+      path: "{{ deploy_dir }}/crl/intermediate_ca.crl"
+      privatekey_path: "{{ deploy_dir }}/ca/intermediate/private/intermediate.key.pem"
+      privatekey_passphrase: "{{ intermediate_ca_private_key_password }}"
+      issuer:
+        CN: "{{ intermediate_ca_cn }}"
+      mode: update
+      last_update: "+0s"
+      next_update: "+720d"
+      revoked_certificates:
+        - serial_number: "{{ serial_number }}"
+          revocation_date: "+0s"
+          issuer:
+            CN: "{{ intermediate_ca_cn }}"
+    when: serial_number is defined
